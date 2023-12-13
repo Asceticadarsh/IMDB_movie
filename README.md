@@ -24,7 +24,7 @@ Next, please download the SQL script file given below containing all the command
 ***
 
 ## Where do I get the data from?
-You can find data with all SQL script and Excel sheet [here](https://github.com/Asceticadarsh/RSVP_movie/source)
+You can find data with all SQL script and Excel sheet [here](https://github.com/Asceticadarsh/RSVP_movie/tree/main/source)
 or you can visit to [Kagel RSVP Case Study](https://www.kaggle.com/datasets/blitzapurv/rsvp-case-study)
 ***
 
