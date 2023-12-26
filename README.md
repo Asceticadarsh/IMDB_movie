@@ -47,7 +47,7 @@ All Questions have been separated into four segments below you can find the segm
 - [Segment 3](#segment-3)
 - [Segment 4](#segment-4)
 ***
-
+#
 ### Segment 1
 **1. Find the total number of rows in each table of the schema ?**
 ````SQL
@@ -70,7 +70,6 @@ WHERE
 |role_mapping	  |     13549 |
 
 The names table has the most rows in all the tables followed by the genre table.
-
 ***
 
 **2. Which columns in the movie table have null values ?**
@@ -119,7 +118,6 @@ ORDER BY MONTH
 	(date_published);
 ```
 **Output result**
-
 |year|number_of_movies|    
 |----|----------------|     
 |2017|	3052          |    
@@ -162,7 +160,6 @@ HAVING
 	year=2019;
 ```
 **Output result**
-
 |number_of_movies|year|    
 |----------------|----|     
 |887|	2019          | 
@@ -177,7 +174,6 @@ FROM
 	genre;
 ```
 **Output result**
-
 | **genre** |
 |-----------|
 | Drama     |
@@ -213,13 +209,13 @@ ORDER BY
 LIMIT 1;
 ```
 **Output result**
-
 | genre | number_of_movies |
 |-------|------------------|
 | Drama | 4285             |
 
 So, based on the insight that you just drew, RSVP Movies should focus on the ‘Drama’ genre. 
 But wait, it is too early to decide. A movie can belong to two or more genres. 
+
 So, let’s find out the count of movies that belong to only one genre.
 
 ***
@@ -331,9 +327,9 @@ Thriller movies is in top 3 among all genres in terms of number of movies
  
 ***
 #
-### Segment 2
-In the previous segment, you analysed the movies and genres tables. 
 
+### Segment 2
+In the previous segment, you analysed the movies and genres tables.<br>
 In this segment, you will analyse the ratings table as well.
 
 To start with lets get the min and max values of different columns in the table
@@ -356,8 +352,7 @@ FROM
 |----------------|----------------|-----------------|-----------------|-------------------|-------------------|
 | 1.0            | 10.0           | 100             | 725138          | 1                 | 10                |
 
-So, the minimum and maximum values in each column of the ratings table are in the expected range. 
-
+So, the minimum and maximum values in each column of the ratings table are in the expected range.<br>
 This implies there are no outliers in the table. 
 
 Now, let’s find out the top 10 movies based on average ratings.
@@ -517,6 +512,7 @@ WHERE
 ORDER BY 
 	avg_rating DESC;
 ```
+**Output result**
 | title                                | avg_rating | genre    |
 |--------------------------------------|------------|----------|
 | The Brighton Miracle                 | 9.5        | Drama    |
@@ -581,12 +577,502 @@ ORDER BY total_votes DESC;
 | Italian   | 100653      |
 | German    | 79384       |
 
-Answer is Yes
-
+Answer is Yes.<br>
 Now that you have analyzed the movies, genres, and rating tables, let us analyze another table, the names table. 
 
 Let’s begin by searching for null values in the tables.
 ***
+#
 
 ### Segment 3
+**18. Which columns in the names table have null values ?**
+```sql
+SELECT 
+		SUM(CASE WHEN name IS NULL THEN 1 ELSE 0 END) AS name_nulls, 
+		SUM(CASE WHEN height IS NULL THEN 1 ELSE 0 END) AS height_nulls,
+		SUM(CASE WHEN date_of_birth IS NULL THEN 1 ELSE 0 END) AS date_of_birth_nulls,
+		SUM(CASE WHEN known_for_movies IS NULL THEN 1 ELSE 0 END) AS known_for_movies_nulls
+		
+FROM 
+	 names;
+```
+**Output result**
+| names_nulls | height_nulls | date_of_birth_nulls | known_for_movies_nulls |
+|-------------|--------------|---------------------|------------------------|
+| 0           | 17335        | 13431               | 15226                  |
+
+There are no Null values in the column 'name'.<br>
+The director is the most important person in a movie crew. <br>
+Let’s find out the top three directors in the top three genres who can be hired by RSVP Movies.
+***
+
+**19. Who are the top three directors in the top three genres whose movies have an average rating > 8 ?**
+```sql
+WITH top_genre AS
+(
+  SELECT 
+	g.genre, COUNT(g.movie_id) AS movie_count 
+  FROM 
+    genre AS g INNER JOIN ratings AS r
+	ON g.movie_id = r.movie_id 
+  WHERE avg_rating > 8 
+  GROUP BY genre 
+  ORDER BY movie_count DESC 
+  LIMIT 3
+),
+top_director AS
+(
+  SELECT 
+    n.name AS director_name, 
+    COUNT(g.movie_id) AS movie_count, 
+    ROW_NUMBER() OVER ( ORDER BY COUNT(g.movie_id) DESC
+    		) AS director_row_rank 
+  FROM 
+    names AS n
+    INNER JOIN director_mapping AS dm ON n.id = dm.name_id 
+    INNER JOIN genre AS g ON dm.movie_id = g.movie_id 
+    INNER JOIN ratings AS r ON r.movie_id = g.movie_id, 
+    top_genre 
+  WHERE g.genre in (top_genre.genre) AND avg_rating > 8 
+  GROUP BY director_name
+  ORDER BY movie_count DESC
+)
+SELECT *
+FROM top_director
+WHERE director_row_rank <= 3
+LIMIT 3;
+```
+**Output result**
+| director_name | movie_count | director_row_rank |
+|---|---|---|
+| James Mangold | 4 | 1 |
+| Soubin Shahir | 3 | 2 |
+| Joe Russo | 3 | 3 |
+
+James Mangold can be hired as the director for RSVP's next project. Do you remember his movies, 'Logan' and 'The Wolverine'.<br>
+Now, let’s find out the top two actors.
+***
+
+**20. Who are the top two actors whose movies have a median rating >= 8 ?**
+```sql
+SELECT DISTINCT
+    name AS actor_name, 
+    COUNT(r.movie_id) AS movie_count
+FROM
+    ratings AS r
+        INNER JOIN
+    role_mapping AS rm ON rm.movie_id = r.movie_id
+        INNER JOIN
+    names AS n ON rm.name_id = n.id
+WHERE
+    median_rating >= 8
+        AND category = 'actor'
+GROUP BY name
+ORDER BY movie_count DESC
+LIMIT 2;
+```
+**Output result**
+| actor_name | movie_count |
+|---|---|
+| Mammootty | 8 |
+| Mohanlal | 5 |
+
+RSVP Movies plans to partner with other global production houses. 
+Let’s find out the top three production houses in the world.*/
+***
+
+**21. Which are the top three production houses based on the number of votes received by their movies ?**
+```sql
+SELECT 
+	production_company, 
+    SUM(total_votes) AS vote_count,
+	DENSE_RANK() OVER(ORDER BY SUM(total_votes) DESC) AS prod_comp_rank
+FROM 
+	movie AS m
+		INNER JOIN 
+	ratings AS r ON m.id = r.movie_id
+GROUP BY 
+	production_company
+LIMIT 3;
+```
+**Output result**
+| production_company | vote_count | prod_comp_rank |
+|---|---|---|
+| Marvel Studios | 2656967 | 1 |
+| Twentieth Century Fox | 2411163 | 2 |
+| Warner Bros. | 2396057 | 3 |
+
+Yes Marvel Studios rules the movie world.<br>
+So, these are the top three production houses based on the number of votes received by the movies they have produced.
+
+Since RSVP Movies is based out of Mumbai, India also wants to woo its local audience.<br> 
+RSVP Movies also wants to hire a few Indian actors for its upcoming project to give a regional feel.<br>
+Let’s find out who these actors could be.
+***
+
+**22. Rank actors with movies released in India based on their average ratings. Which actor is at the top of the list ?**
+```sql
+SELECT 
+	n.name as actor_name,
+    SUM(r.total_votes) AS total_votes,
+    COUNT(rm.movie_id) AS movie_count,
+    ROUND(SUM(r.avg_rating*r.total_votes)/SUM(r.total_votes),2) AS actor_avg_rating,
+    RANK() OVER (ORDER BY SUM(r.avg_rating*r.total_votes)/SUM(r.total_votes) DESC ) AS actor_rank
+FROM
+	names AS n
+		INNER JOIN 
+	role_mapping AS rm ON n.id = rm.name_id
+		INNER JOIN
+	movie AS m ON rm.movie_id = m.id
+		INNER JOIN
+	ratings AS r ON m.id = r.movie_id
+WHERE 
+	country LIKE "%india%"
+		AND category LIKE "actor"
+GROUP BY 
+	actor_name 
+HAVING 
+	COUNT(m.id)>=5
+ORDER BY
+	actor_avg_rating DESC
+LIMIT 10 ;
+```
+**Output result**
+| actor_name | total_votes | movie_count | actor_avg_rating | actor_rank |
+|---|---|---|---|---|
+| Vijay Sethupathi | 23114 | 5 | 8.42 | 1 |
+| Fahadh Faasil | 13557 | 5 | 7.99 | 2 |
+| Yogi Babu | 8500 | 11 | 7.83 | 3 |
+| Joju George | 3926 | 5 | 7.58 | 4 |
+| Ammy Virk | 2504 | 6 | 7.55 | 5 |
+| Dileesh Pothan | 6235 | 5 | 7.52 | 6 |
+| Kunchacko Boban | 5628 | 6 | 7.48 | 7 |
+| Pankaj Tripathi | 40728 | 5 | 7.44 | 8 |
+| Rajkummar Rao | 42560 | 6 | 7.37 | 9 |
+| Dulquer Salmaan | 17666 | 5 | 7.30 | 10 |
+
+Top actor is Vijay Sethupathi
+***
+
+**23.Find out the top five actresses in Hindi movies released in India based on their average ratings ?** 
+```sql
+SELECT 
+	n.name as actress_name,
+    SUM(r.total_votes) AS total_votes,
+    COUNT(rm.movie_id) AS movie_count,
+    ROUND(SUM(r.avg_rating*r.total_votes)/SUM(r.total_votes),2) AS actress_avg_rating,
+    RANK() OVER (ORDER BY SUM(r.avg_rating*r.total_votes)/SUM(r.total_votes) DESC ) AS actress_rank
+FROM
+	names AS n
+		INNER JOIN 
+	role_mapping AS rm ON n.id = rm.name_id
+		INNER JOIN
+	movie AS m ON rm.movie_id = m.id
+		INNER JOIN
+	ratings AS r ON m.id = r.movie_id
+WHERE 
+	country LIKE "%india%"
+		AND category LIKE "actress"
+        AND languages LIKE "%hindi%"
+GROUP BY 
+	actress_name 
+HAVING 
+	COUNT(m.id)>=3
+ORDER BY
+	actress_avg_rating DESC;
+```
+**Output result**
+| actor_name | total_votes | movie_count | actor_avg_rating | actor_rank |
+|---|---|---|---|---|
+| Taapsee Pannu | 18061 | 3 | 7.74 | 1 |
+| Kriti Sanon | 21967 | 3 | 7.05 | 2 |
+| Divya Dutta | 8579 | 3 | 6.88 | 3 |
+| Shraddha Kapoor | 26779 | 3 | 6.63 | 4 |
+| Kriti Kharbanda | 2549 | 3 | 4.80 | 5 |
+| Sonakshi Sinha | 4025 | 4 | 4.18 | 6 |
+
+Taapsee Pannu tops with average rating 7.74.<br>
+Now let us divide all the thriller movies in the following categories and find out their numbers.
+
+
+**24. Select thriller movies as per avg rating and classify them in the following categories:**
+
+	Rating > 8: Superhit movies
+	Rating between 7 and 8: Hit movies
+	Rating between 5 and 7: One-time-watch movies
+	Rating < 5: Flop movies
+```sql
+SELECT title,
+		CASE WHEN avg_rating > 8 THEN 'Superhit movies'
+			 WHEN avg_rating BETWEEN 7 AND 8 THEN 'Hit movies'
+             WHEN avg_rating BETWEEN 5 AND 7 THEN 'One-time-watch movies'
+			 WHEN avg_rating < 5 THEN 'Flop movies'
+		END AS avg_rating_category
+FROM 
+	movie AS m
+		INNER JOIN 
+	genre AS g ON m.id=g.movie_id
+		INNER JOIN 
+	ratings as r ON m.id=r.movie_id
+WHERE 
+	genre='thriller';
+```
+**Output result**
+| title | avg_rating_category |
+|---|---|
+| Der müde Tod | Hit movies |
+| Fahrenheit 451 | Flop movies |
+| Pet Sematary | One-time-watch movies |
+| Dukun | One-time-watch movies |
+| Back Roads | Hit movies |
+| Countdown | One-time-watch movies |
+| Staged Killer | Flop movies |
+| Vellaipookal | Hit movies |
+| Uriyadi 2 | Hit movies |
+| Incitement | Hit movies |
+
+Until now, you have analysed various tables of the data set.<br>
+Now, you will perform some tasks that will give you a broader understanding of the data in this segment.
+***
+#
+
 ### Segment 4
+**25. What is the genre-wise running total and moving average of the average movie duration?** 
+```sql
+SELECT genre,
+		ROUND(AVG(duration),2) AS avg_duration,
+        SUM(ROUND(AVG(duration),1)) OVER(ORDER BY genre ROWS UNBOUNDED PRECEDING) AS running_total_duration,
+		SUM(AVG(DURATION)) OVER(ORDER BY genre ROWS 10 PRECEDING) AS moving_avg_duration
+FROM movie AS m 
+INNER JOIN genre AS g 
+ON m.id= g.movie_id
+GROUP BY genre
+ORDER BY genre;
+```
+**Output result**
+|genre | avg_duration | running_totol_duration | moving_avg_duration |
+|---|---|---|---|
+| Action | 112.88 | 112.9 | 112.8829 |
+| Adventure | 101.87 | 214.8 | 214.7543 |
+| Comedy | 102.62 | 317.4 | 317.3770 |
+| Crime | 107.05 | 424.5 | 424.4287 |
+| Drama | 106.77 | 531.3 | 531.2033 |
+| Family | 100.97 | 632.3 | 632.1702 |
+| Fantasy | 105.14 | 737.4 | 737.3106 |
+| Horror | 92.72 | 830.1 | 830.0349 |
+| Mystery | 101.80 | 931.9 | 931.8349 |
+| Others | 100.16 | 1032.1 | 1031.9949 |
+| Romance | 109.53 | 1141.6 | 1141.5291 |
+| Sci-Fi | 97.94 | 1239.5 | 1126.5875 |
+| Thriller | 101.58 | 1341.1 | 1126.2922 |
+| Drama | 2019 | Joker | $ 995064593 |
+| Comedy | 2019 | Eaten by Lions | $ 99276 |
+| Comedy | 2019 | Friend Zone | $ 9894885 |
+| Drama | 2019 | Nur eine Frau | $ 9884 |
+
+Let us find top 5 movies of each year with top 3 genres.
+***
+
+**26. Which are the five highest-grossing movies of each year that belong to the top three genres ?** 
+```sql
+WITH top_3_genre AS
+( 	
+	SELECT 
+		genre, 
+        	COUNT(movie_id) AS number_of_movies
+    FROM 
+		genre AS g INNER JOIN movie AS m
+			ON g.movie_id = m.id
+    GROUP BY genre
+    ORDER BY COUNT(movie_id) DESC
+    LIMIT 3
+),
+top_5 AS
+(
+	SELECT
+		genre,
+		year,
+		title AS movie_name,
+		worlwide_gross_income,
+		DENSE_RANK() OVER(PARTITION BY year ORDER BY worlwide_gross_income DESC) AS movie_rank
+        
+	FROM 
+		movie AS m INNER JOIN genre AS g
+			ON m.id= g.movie_id
+	WHERE genre IN (SELECT genre FROM top_3_genre)
+)
+SELECT *
+FROM top_5
+WHERE movie_rank<=5;
+```
+**Output result**
+| genre | year | movie_name | worldwide_gross_income | movie_rank |
+|---|---|---|---|---|
+| Drama | 2017 | Shatamanam Bhavati | INR 530500000 | 1 |
+| Drama | 2017 | Winner | INR 250000000 | 2 |
+| Drama | 2017 | Thank You for Your Service | $ 9995692 | 3 |
+| Comedy | 2017 | The Healer | $ 9979800 | 4 |
+| Drama | 2017 | The Healer | $ 9979800 | 4 |
+| Thriller | 2017 | Gi-eok-ui bam | $ 9968972 | 5 |
+| Thriller | 2018 | The Villain | INR 1300000000 | 1 |
+| Drama | 2018 | Antony & Cleopatra | $ 998079 | 2 |
+| Comedy | 2018 | La fuitina sbagliata | $ 992070 | 3 |
+| Drama | 2018 | Zaba | $ 991 | 4 |
+| Comedy | 2018 | Gung-hab | $ 9899017 | 5 |
+| Thriller | 2019 | Prescience | $ 9956 | 1 |
+| Thriller | 2019 | Joker | $ 995064593 | 2 |
+| Drama | 2019 | Joker | $ 995064593 | 2 |
+| Comedy | 2019 | Eaten by Lions | $ 99276 | 3 |
+| Comedy | 2019 | Friend Zone | $ 9894885 | 4 |
+| Drama | 2019 | Nur eine Frau | $ 9884 | 5 |
+
+
+Finally, let’s find out the names of the top two production houses that have produced the highest number of hits among multilingual movies.
+***
+
+**27.  Which are the top two production houses that have produced the highest number of hits (median rating >= 8) among multilingual movies ?**
+```sql
+SELECT 
+	production_company,
+	COUNT(m.id) AS movie_count,
+	ROW_NUMBER() OVER(ORDER BY count(id) DESC) AS prod_comp_rank
+FROM 
+	movie AS m 
+		INNER JOIN 
+	ratings AS r ON m.id=r.movie_id
+WHERE 
+	median_rating>=8 
+		AND production_company IS NOT NULL 
+        AND POSITION(',' IN languages)>0
+GROUP BY 
+	production_company
+LIMIT 2;
+```
+**Output result**
+|production_comapany | movie_count | prod_comp_rank |
+|---|---|---|
+| Star Cinema |	7 | 1 |
+| Twentieth Century Fox |	4 | 2 |
+***
+
+**28. Who are the top 3 actresses based on number of Super Hit movies (average rating >8) in drama genre?**
+```sql
+SELECT 
+	n.name as actress_name,
+    SUM(r.total_votes) AS total_votes,
+    COUNT(rm.movie_id) AS movie_count,
+    ROUND(SUM(r.avg_rating*r.total_votes)/SUM(r.total_votes),2) AS actress_avg_rating,
+    RANK() OVER (ORDER BY SUM(r.avg_rating*r.total_votes)/SUM(r.total_votes) DESC ) AS actress_rank
+FROM
+	names AS n
+		INNER JOIN 
+	role_mapping AS rm ON n.id = rm.name_id
+		INNER JOIN
+	movie AS m ON rm.movie_id = m.id
+		INNER JOIN
+	ratings AS r ON m.id = r.movie_id
+		INNER JOIN 
+	genre AS g ON m.id = g.movie_id
+WHERE 
+	r.avg_rating > 8
+		AND g.genre LIKE "%drama%"
+        AND category LIKE "%actress%"
+GROUP BY 
+	actress_name 
+ORDER BY
+	actress_avg_rating DESC
+LIMIT 10;
+```
+**Output result**
+| actress_name | total_votes | movie_count | actress_avg_rating | actress_rank |
+|---|---|---|---|---|
+| Sangeetha Bhat | 1010 | 1 | 9.60 | 1 |
+| Fatmire Sahiti | 3932 | 1 | 9.40 | 2 |
+| Adriana Matoshi | 3932 | 1 | 9.40 | 2 |
+| Mahie Gill | 897 | 1 | 9.40 | 2 |
+| Pranati Rai Prakash | 897 | 1 | 9.40 | 2 |
+| Anupama Kumar | 645 | 1 | 9.30 | 6 |
+| Neeraja | 645 | 1 | 9.30 | 6 |
+| Bidipta Chakraborty | 142 | 1 | 9.10 | 8 |
+| Putri Marino | 232 | 1 | 9.10 | 8 |
+***
+
+**29. Get the following details for top 9 directors (based on number of movies)**
+	Director id
+	Name
+	Number of movies
+	Average inter movie duration in days
+	Average movie ratings
+	Total votes
+	Min rating
+	Max rating
+	total movie durations
+```sql
+WITH movie_date_info AS
+(
+SELECT d.name_id, name, d.movie_id,
+	   m.date_published, 
+       LEAD(date_published, 1) OVER(PARTITION BY d.name_id ORDER BY date_published, d.movie_id) AS next_movie_date
+FROM director_mapping d
+		JOIN 
+	names AS n 
+			ON d.name_id=n.id 
+		JOIN 
+	movie AS m 
+			ON d.movie_id=m.id
+),
+
+date_difference AS
+(
+	 SELECT *, DATEDIFF(next_movie_date, date_published) AS diff
+	 FROM movie_date_info
+ ),
+ 
+ avg_inter_days AS
+ (
+	 SELECT name_id, AVG(diff) AS avg_inter_movie_days
+	 FROM date_difference
+	 GROUP BY name_id
+ ),
+ 
+ final_result AS
+ (
+	 SELECT d.name_id AS director_id,
+		 name AS director_name,
+		 COUNT(d.movie_id) AS number_of_movies,
+		 ROUND(avg_inter_movie_days) AS inter_movie_days,
+		 ROUND(AVG(avg_rating),2) AS avg_rating,
+		 SUM(total_votes) AS total_votes,
+		 MIN(avg_rating) AS min_rating,
+		 MAX(avg_rating) AS max_rating,
+		 SUM(duration) AS total_duration,
+		 ROW_NUMBER() OVER(ORDER BY COUNT(d.movie_id) DESC) AS director_row_rank
+	 FROM
+		 names AS n 
+         JOIN director_mapping AS d 
+         ON n.id=d.name_id
+		 JOIN ratings AS r 
+         ON d.movie_id=r.movie_id
+		 JOIN movie AS m 
+         ON m.id=r.movie_id
+		 JOIN avg_inter_days AS a 
+         ON a.name_id=d.name_id
+	 GROUP BY director_id
+ )
+ SELECT *	
+ FROM final_result
+ LIMIT 9;
+```
+**Output result**
+| director_id | name | number_of_movies  | avg_inter_movie_days | avg_rating | total_votes | min_rating | max_rating | total_duration | director_row_rank |
+|---|---|---|---|---|---|---|---|---|---|
+| nm2096009 | Andrew Jones | 5 | 191 | 3.02 | 1989 | 2.7 | 3.2 | 432 | 1 |
+| nm1777967 | A.L. Vijay | 5 | 177 | 5.42 | 1754 | 3.7 | 6.9 | 613 | 2 |
+| nm6356309 | Özgür Bakar | 4 | 112 | 3.75 | 1092 | 3.1 | 4.9 | 374 | 3 |
+| nm2691863 | Justin Price | 4 | 315 | 4.50 | 5343 | 3.0 | 5.8 | 346 | 4 |
+| nm0814469 | Sion Sono | 4 | 331 | 6.03 | 2972 | 5.4 | 6.4 | 502 | 5 |
+| nm0831321 | Chris Stokes | 4 | 198 | 4.33 | 3664 | 4.0 | 4.6 | 352 | 6 |
+| nm0425364 | Jesse V. Johnson | 4 | 299 | 5.45 | 14778 | 4.2 | 6.5 | 383 | 7 |
+| nm0001752 | Steven Soderbergh | 4 | 254 | 6.48 | 171684 | 6.2 | 7.0 | 401 | 8 |
+| nm0515005 | Sam Liu | 4 | 260 | 6.23 | 28557 | 5.8 | 6.7 | 312 | 9 |
+
